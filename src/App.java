@@ -1,5 +1,6 @@
 import java.nio.charset.Charset;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Scanner;
@@ -32,6 +33,19 @@ public class App {
     
     static TabelaHash<Cliente, Lista<Pedido>> pedidosPorCliente;
     
+
+    private static class ResumoCliente {
+        Cliente cliente;
+        int quantidadePedidos;
+        Double valorTotal;
+
+        ResumoCliente(Cliente cliente, int quantidadePedidos, Double valorTotal) {
+            this.cliente = cliente;
+            this.quantidadePedidos = quantidadePedidos;
+            this.valorTotal = valorTotal;
+        }
+    }
+
     static void limparTela() {
         System.out.print("\033[H\033[2J");
         System.out.flush();
@@ -77,10 +91,9 @@ public class App {
         System.out.println("6 - Recortar a lista de produtos, por nome");
         System.out.println("7 - Recortar a lista de produtos, por id");
         System.out.println("8 - Gravar, em arquivo, pedidos de um produto");
-        // TODO: adicione aqui as opções de menu referentes às Tarefas 4 e 5:
-        // - uma opção para exibir o histórico completo de pedidos de um cliente
-        // - uma opção para filtrar os pedidos de um cliente por valor mínimo
-        // - uma opção para exibir o ranking de clientes
+        System.out.println("9 - Exibir histórico de pedidos");
+        System.out.println("10 - Filtrar pedidos de um cliente por valor");
+        System.out.println("11 - Exibir ranking do cliente");
         System.out.println("0 - Finalizar");
         
         return lerOpcao("Digite sua opção: ", Integer.class);
@@ -462,7 +475,16 @@ public class App {
      * o relatório.
      */
     public static void rankingClientes() {
+        ArrayList<ResumoCliente> ranking = new ArrayList<>();
 
+        Lista<Cliente> clientes = clientesPorId.recortar(10_000, 10_000 + quantosClientes - 1);
+        clientes.paraCada(cliente -> {
+            try {
+                Lista<Pedido> historico = pedidosPorCliente.pesquisar(cliente);
+                if(historico.tamanho() >= 2)
+                    double valorTotal = historico.calcularValorTotal(pedido -> pedido.valorFinal());
+            }
+        });
     }
     
     public static void main(String[] args) {
@@ -494,8 +516,9 @@ public class App {
         	case 6 -> recortarProdutosNome(produtosCadastradosPorNome); 
         	case 7 -> recortarProdutosId(produtosCadastradosPorId); 
         	case 8 -> pedidosDoProduto();
-        	// TODO: adicione aqui os cases correspondentes às novas opções do menu (Tarefas 4 e 5),
-        	// chamando pedidosDoCliente() e rankingClientes()
+            case 9 -> pedidosDoCliente();
+            case 10 -> pedidosDoCliente(true);
+            case 11 -> rankingClientes();
             case 0 -> System.out.println("FLW VLW OBG VLT SMP.");
             }
             pausa();
