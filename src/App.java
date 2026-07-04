@@ -137,12 +137,35 @@ public class App {
 
     	Scanner arquivo = null;
     	AVL<Integer, Cliente> clientesCadastrados = new AVL<Integer, Cliente>();
+        int numClientes;
+    	String linha;
+    	Cliente cliente;
 
     	// TODO: implementar a leitura do arquivo de clientes, seguindo o mesmo padrão usado em lerProdutos:
     	// abra o arquivo, leia a primeira linha (quantidade de clientes), e então, para cada linha seguinte,
     	// crie um novo Cliente com o nome lido e insira-o na árvore clientesCadastrados (chave = hashCode do cliente).
     	// Atualize também a variável quantosClientes.
     	// Em caso de problemas na leitura (IOException), a árvore retornada deve ser vazia.
+    	
+    	try {
+    		arquivo = new Scanner(new File(nomeArquivoDados), Charset.forName("UTF-8"));
+    		
+    		numClientes = Integer.parseInt(arquivo.nextLine());
+    		clientesCadastrados = new AVL<Integer, Cliente>();
+    		
+    		for (int i = 0; i < numClientes; i++) {
+    			linha = arquivo.nextLine();
+    			cliente = Cliente.criarDoTexto(linha);
+    			Integer chave = cliente.hashCode();
+    			clientesCadastrados.inserir(chave, cliente);
+    		}
+    		quantosClientes = numClientes;
+    		
+    	} catch (IOException excecaoArquivo) {
+    		clientesCadastrados = null;
+    	} finally {
+    		arquivo.close();
+    	}
 
     	return clientesCadastrados;
     }

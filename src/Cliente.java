@@ -44,11 +44,12 @@ public class Cliente {
         return s.toString();
     }
 
-    /**
-     * TODO: retorne um código hash para o cliente, que corresponde a seu documento.
-     */
     @Override
     public int hashCode(){
     	return documento;
+    }
+
+    public static Cliente criarDoTexto(String linha) {
+        return new Cliente(linha);
     }
 }
