@@ -5,14 +5,10 @@ public class Cliente {
     private String nome;
     private int documento;
 
-    /**
-     * Construtor do cliente. Cria um novo cliente a partir do nome informado.
-     * TODO: atribua ao cliente um número de documento gerado sequencialmente a partir
-     * do contador estático ultimoID (e incremente o contador).
-     */
     public Cliente (String nome) {
         setNome(nome);
-
+        this.documento = ultimoID;
+        ultimoID++;
     }
 
     public String getNome() {
@@ -36,9 +32,6 @@ public class Cliente {
         }
     }
 
-    /**
-     * TODO: retorne uma representação textual do cliente, incluindo seu nome e documento.
-     */
     @Override
     public String toString() {
     	StringBuilder s = new StringBuilder();
