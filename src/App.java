@@ -141,7 +141,7 @@ public class App {
     	String linha;
     	Cliente cliente;
 
-    	// TODO: implementar a leitura do arquivo de clientes, seguindo o mesmo padrão usado em lerProdutos:
+    	// DONE: implementar a leitura do arquivo de clientes, seguindo o mesmo padrão usado em lerProdutos:
     	// abra o arquivo, leia a primeira linha (quantidade de clientes), e então, para cada linha seguinte,
     	// crie um novo Cliente com o nome lido e insira-o na árvore clientesCadastrados (chave = hashCode do cliente).
     	// Atualize também a variável quantosClientes.
@@ -162,7 +162,7 @@ public class App {
     		quantosClientes = numClientes;
     		
     	} catch (IOException excecaoArquivo) {
-    		clientesCadastrados = null;
+    		clientesCadastrados = new AVL<>();
     	} finally {
     		arquivo.close();
     	}
@@ -297,11 +297,8 @@ public class App {
         for (int i = 0; i < quantidade; i++) {
         	formaDePagamento = sorteio.nextInt(2) + 1;
 
-        	// TODO: selecione aleatoriamente um cliente para este pedido.
-        	// Sorteie um documento de cliente (use sorteio.nextInt(quantosClientes) + 10_000)
-        	// e localize o cliente correspondente em clientesPorId.
-        	idCliente = -1;
-        	cliente = null;
+        	idCliente = sorteio.nextInt(quantosClientes) + 10_000;
+        	cliente = clientesPorId.pesquisar(idCliente);
 
         	Pedido pedido = new Pedido(LocalDate.now(), formaDePagamento, cliente);
             quantProdutos = sorteio.nextInt(8) + 1;
@@ -314,8 +311,7 @@ public class App {
             }
             pedidos.inserir(pedido);
 
-            // TODO: vincule o cliente sorteado ao seu novo pedido na tabela hash pedidosPorCliente,
-            // chamando inserirNaTabelaPedidosDoCliente(cliente, pedido).
+            inserirNaTabelaPedidosDoCliente(cliente, pedido);
         }
         return pedidos;
     }
@@ -326,11 +322,19 @@ public class App {
      */
     private static void inserirNaTabelaPedidosDoCliente(Cliente cliente, Pedido pedido) {
 
-    	// TODO: implementar, de forma análoga ao método inserirNaTabela(Produto, Pedido):
+    	// DONE: implementar, de forma análoga ao método inserirNaTabela(Produto, Pedido):
     	// pesquise o histórico de pedidos do cliente em pedidosPorCliente; se ele não existir
     	// (NoSuchElementException), crie uma nova Lista<Pedido> e insira-a na tabela associada ao cliente;
     	// em seguida, insira o pedido na lista de histórico do cliente.
+        Lista<Pedido> pedidosDoCliente;
+        try {
+            pedidosDoCliente = pedidosPorCliente.pesquisar(cliente);
+        } catch (NoSuchElementException e) {
+            pedidosDoCliente = new Lista<>();
+            pedidosPorCliente.inserir(cliente, pedidosDoCliente);
+        }
 
+        pedidosDoCliente.inserir(pedido);
     }
     
     private static void inserirNaTabela(Produto produto, Pedido pedido) {
@@ -383,7 +387,59 @@ public class App {
     	// ao selecionar essa opção no menu, o sistema deve solicitar um valor e exibir apenas os
     	// pedidos do cliente que o superem. Dica: você pode usar o método filtrar da classe Lista,
     	// ou adaptar a assinatura deste método para receber esse comportamento como parâmetro.
+        pedidosDoCliente(false);
+    }
 
+    private static void pedidosDoCliente(boolean filtrarPorValorMinimo) {
+        Cliente cliente;
+        Lista<Pedido> historico;
+        Lista<Pedido> pedidosExibidos;
+        Double valorMinimo = 0.0;
+
+        int documento = lerOpcao("Digite o documento: ", Integer.class);
+
+        try {
+            cliente = clientesPorId.pesquisar(documento);
+        } catch (NoSuchElementException e) {
+            System.out.println("Cliente não encontrado");
+            return;
+        }
+
+        try {
+            historico = pedidosPorCliente.pesquisar(cliente);
+        } catch (NoSuchElementException e) {
+            System.out.println("Cliente" + cliente.getNome());
+            System.out.println("Cliente não possui pedidos");
+            return;
+        }
+
+        if(filtrarPorValorMinimo) {
+            valorMinimo = lerOpcao("Digite o valor mínimo: ", Double.class);
+            if(valorMinimo == null) {
+                System.out.println("Valor mínimo inválido.");
+                return;
+            }
+            final double limiteMinimo = valorMinimo;
+            pedidosExibidos = historico.filtrar(pedido -> pedido.valorFinal() > limiteMinimo);
+        } else {
+            pedidosExibidos = historico;
+        }
+
+        int totalPedidos = pedidosExibidos.tamanho();
+        double valorTotal = totalPedidos > 0 ? pedidosExibidos.calcularValorTotal(pedido -> pedido.valorFinal()) : 0.0;
+        double valorMedio = totalPedidos > 0 ? valorTotal / totalPedidos : 0.0;
+
+        System.out.println("Cliente" + cliente);
+        if(filtrarPorValorMinimo)
+            System.out.println("Pedido com valor acima de " + String.format("%.2f", valorMinimo) + ":");
+        else
+            System.out.println("Histórico completo de pedidos ");
+
+        System.out.println(pedidosExibidos);
+        System.out.println("Resumo:");
+        System.out.println("Total de pedidos: " + totalPedidos);
+        System.out.println("Valor total gasto: " + String.format("%.2f", valorTotal));
+        System.out.println("Valor médio por pedido: " + String.format("%.2f", valorMedio));
     }
 
     /**
