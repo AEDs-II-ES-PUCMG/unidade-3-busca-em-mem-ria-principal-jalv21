@@ -1,8 +1,11 @@
 import java.nio.charset.Charset;
+import java.time.LocalDate;
 import java.util.NoSuchElementException;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.function.Function;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 
@@ -17,9 +20,17 @@ public class App {
     /** Quantidade de produtos cadastrados atualmente no vetor */
     static int quantosProdutos = 0;
 
-    static ABB<String, Produto> produtosCadastradosPorNome;
+    static AVL<String, Produto> produtosCadastradosPorNome;
     
-    static ABB<Integer, Produto> produtosCadastradosPorId;
+    static AVL<Integer, Produto> produtosCadastradosPorId;
+    
+    static AVL <Integer, Cliente> clientesPorId;
+    
+    static int quantosClientes = 0;
+    
+    static TabelaHash<Produto, Lista<Pedido>> pedidosPorProduto;
+    
+    static TabelaHash<Cliente, Lista<Pedido>> pedidosPorCliente;
     
     static void limparTela() {
         System.out.print("\033[H\033[2J");
@@ -65,6 +76,11 @@ public class App {
         System.out.println("5 - Remover produto, por id");
         System.out.println("6 - Recortar a lista de produtos, por nome");
         System.out.println("7 - Recortar a lista de produtos, por id");
+        System.out.println("8 - Gravar, em arquivo, pedidos de um produto");
+        // TODO: adicione aqui as opções de menu referentes às Tarefas 4 e 5:
+        // - uma opção para exibir o histórico completo de pedidos de um cliente
+        // - uma opção para filtrar os pedidos de um cliente por valor mínimo
+        // - uma opção para exibir o ranking de clientes
         System.out.println("0 - Finalizar");
         
         return lerOpcao("Digite sua opção: ", Integer.class);
@@ -78,19 +94,19 @@ public class App {
      * @param nomeArquivoDados Nome do arquivo de dados a ser aberto.
      * @return Uma árvore com os produtos carregados, ou vazia em caso de problemas de leitura.
      */
-    static <K> ABB<K, Produto> lerProdutos(String nomeArquivoDados, Function<Produto, K> extratorDeChave) {
+    static <K> AVL<K, Produto> lerProdutos(String nomeArquivoDados, Function<Produto, K> extratorDeChave) {
     	
     	Scanner arquivo = null;
     	int numProdutos;
     	String linha;
     	Produto produto;
-    	ABB<K, Produto> produtosCadastrados;
+    	AVL<K, Produto> produtosCadastrados;
     	
     	try {
     		arquivo = new Scanner(new File(nomeArquivoDados), Charset.forName("UTF-8"));
     		
     		numProdutos = Integer.parseInt(arquivo.nextLine());
-    		produtosCadastrados = new ABB<K, Produto>();
+    		produtosCadastrados = new AVL<K, Produto>();
     		
     		for (int i = 0; i < numProdutos; i++) {
     			linha = arquivo.nextLine();
@@ -109,26 +125,67 @@ public class App {
     	return produtosCadastrados;
     }
     
+    /**
+     * Lê os dados de um arquivo-texto e retorna uma árvore balanceada (AVL) de clientes. Arquivo-texto no formato
+     * N (quantidade de clientes) <br/>
+     * nome do cliente <br/>
+     * Deve haver uma linha para cada um dos clientes. Retorna uma árvore vazia em caso de problemas com o arquivo.
+     * @param nomeArquivoDados Nome do arquivo de dados a ser aberto.
+     * @return Uma árvore AVL com os clientes carregados, ou vazia em caso de problemas de leitura.
+     */
+    static AVL<Integer, Cliente> lerClientes(String nomeArquivoDados) {
+
+    	Scanner arquivo = null;
+    	AVL<Integer, Cliente> clientesCadastrados = new AVL<Integer, Cliente>();
+
+    	// TODO: implementar a leitura do arquivo de clientes, seguindo o mesmo padrão usado em lerProdutos:
+    	// abra o arquivo, leia a primeira linha (quantidade de clientes), e então, para cada linha seguinte,
+    	// crie um novo Cliente com o nome lido e insira-o na árvore clientesCadastrados (chave = hashCode do cliente).
+    	// Atualize também a variável quantosClientes.
+    	// Em caso de problemas na leitura (IOException), a árvore retornada deve ser vazia.
+
+    	return clientesCadastrados;
+    }
+
     static <K> Produto localizarProduto(ABB<K, Produto> produtosCadastrados, K procurado) {
     	
-    	// TODO
-    	return null;
+    	Produto produto;
+    	
+    	cabecalho();
+    	System.out.println("Localizando um produto...");
+    	
+    	try {
+    		produto = produtosCadastrados.pesquisar(procurado);
+    	} catch (NoSuchElementException excecao) {
+    		produto = null;
+    	}
+    	
+    	System.out.println("Número de comparações realizadas: " + produtosCadastrados.getComparacoes());
+    	System.out.println("Tempo de processamento da pesquisa: " + produtosCadastrados.getTempo() + " ms");
+        
+    	return produto;
+    	
     }
     
     /** Localiza um produto na árvore de produtos organizados por id, a partir do código de produto informado pelo usuário, e o retorna. 
      *  Em caso de não encontrar o produto, retorna null */
     static Produto localizarProdutoID(ABB<Integer, Produto> produtosCadastrados) {
         
-        //TODO
-    	return null;
+        int idProduto = lerOpcao("Digite o identificador do produto desejado: ", Integer.class);
+        
+        return localizarProduto(produtosCadastrados, idProduto);
     }
     
     /** Localiza um produto na árvore de produtos organizados por nome, a partir do nome de produto informado pelo usuário, e o retorna. 
      *  A busca não é sensível ao caso. Em caso de não encontrar o produto, retorna null */
     static Produto localizarProdutoNome(ABB<String, Produto> produtosCadastrados) {
         
-    	//TODO
-    	return null;
+    	String descricao;
+    	
+    	System.out.println("Digite o nome ou a descrição do produto desejado:");
+        descricao = teclado.nextLine();
+        
+        return localizarProduto(produtosCadastrados, descricao);
     }
     
     private static void mostrarProduto(Produto produto) {
@@ -154,39 +211,196 @@ public class App {
     /** Localiza e remove um produto da árvore de produtos organizados por id, a partir do código de produto informado pelo usuário, e o retorna. 
      *  Em caso de não encontrar o produto, retorna null */
     static Produto removerProdutoId(ABB<Integer, Produto> produtosCadastrados) {
-    	//TODO
-    	return null;
+         cabecalho();
+         System.out.println("Localizando o produto por id");
+         int id = lerOpcao("Digite o id do produto que deve ser removido", Integer.class);
+         Produto localizado =  removerProduto(produtosCadastrados, id);
+         return localizado;
     }
 
      /** Localiza e remove um produto na árvore de produtos organizados por nome, a partir do nome de produto informado pelo usuário, e o retorna. 
       *  A busca não é sensível ao caso. Em caso de não encontrar o produto, retorna null */
     static Produto removerProdutoNome(ABB<String, Produto> produtosCadastrados) {
-    	//TODO
-    	return null;
+    	String descricao;
+         
+    	cabecalho();
+        System.out.println("Localizando o produto por nome");
+        System.out.print("Digite a descrição do produto que deve ser removido: ");
+        descricao = teclado.nextLine();
+        Produto localizado =  removerProduto(produtosCadastrados, descricao);
+        return localizado;
     }
 
     static <K> Produto removerProduto(ABB<K, Produto> produtosCadastrados, K chave){
-    	//TODO
-    	return null;
+         cabecalho();
+         Produto localizado =  produtosCadastrados.remover(chave);
+         return localizado;
     }
     
     private static <K> void recortarProduto(ABB<K, Produto> produtosCadastrados, K deOnde, K ateOnde) {
-    	//TODO
+    	cabecalho();
+    	System.out.println(produtosCadastrados.recortar(deOnde, ateOnde).toString());
     }
     
     private static void recortarProdutosNome(ABB<String, Produto> produtosCadastrados) {
-    	//TODO
-    }
+     	
+    	String descricaoDeOnde, descricaoAteOnde;
+        
+    	cabecalho();
+    	System.out.print("Digite o nome do primeiro produto do filtro: ");
+        descricaoDeOnde = teclado.nextLine();
+        System.out.print("Digite o nome do último produto do filtro: ");
+        descricaoAteOnde = teclado.nextLine();
+        recortarProduto(produtosCadastrados, descricaoDeOnde, descricaoAteOnde);
+     }
      
     private static void recortarProdutosId(ABB<Integer, Produto> produtosCadastrados) {
-    	//TODO
+     	
+    	cabecalho();
+        int idDeOnde = lerOpcao("Digite o id do primeiro produto do filtro", Integer.class);
+        int idAteOnde = lerOpcao("Digite o id do último produto do filtro", Integer.class);
+        recortarProduto(produtosCadastrados, idDeOnde, idAteOnde);
+    }
+    
+    private static Lista<Pedido> gerarPedidos(int quantidade) {
+        Lista<Pedido> pedidos = new Lista<>();
+        Random sorteio = new Random(42);
+        int quantProdutos;
+        int formaDePagamento;
+        int quant;
+        int idCliente;
+        Cliente cliente;
+
+        for (int i = 0; i < quantidade; i++) {
+        	formaDePagamento = sorteio.nextInt(2) + 1;
+
+        	// TODO: selecione aleatoriamente um cliente para este pedido.
+        	// Sorteie um documento de cliente (use sorteio.nextInt(quantosClientes) + 10_000)
+        	// e localize o cliente correspondente em clientesPorId.
+        	idCliente = -1;
+        	cliente = null;
+
+        	Pedido pedido = new Pedido(LocalDate.now(), formaDePagamento, cliente);
+            quantProdutos = sorteio.nextInt(8) + 1;
+            for (int j = 0; j < quantProdutos; j++) {
+                int id = sorteio.nextInt(7750) + 10_000;
+                Produto produto = produtosCadastradosPorId.pesquisar(id);
+                quant = sorteio.nextInt(10) + 1;
+                pedido.incluirProduto(produto, quant);
+                inserirNaTabela(produto, pedido);
+            }
+            pedidos.inserir(pedido);
+
+            // TODO: vincule o cliente sorteado ao seu novo pedido na tabela hash pedidosPorCliente,
+            // chamando inserirNaTabelaPedidosDoCliente(cliente, pedido).
+        }
+        return pedidos;
+    }
+
+    /**
+     * Associa, na tabela hash pedidosPorCliente, o pedido informado ao histórico de pedidos do cliente.
+     * Caso o cliente ainda não possua um histórico registrado, um novo deve ser criado.
+     */
+    private static void inserirNaTabelaPedidosDoCliente(Cliente cliente, Pedido pedido) {
+
+    	// TODO: implementar, de forma análoga ao método inserirNaTabela(Produto, Pedido):
+    	// pesquise o histórico de pedidos do cliente em pedidosPorCliente; se ele não existir
+    	// (NoSuchElementException), crie uma nova Lista<Pedido> e insira-a na tabela associada ao cliente;
+    	// em seguida, insira o pedido na lista de histórico do cliente.
+
+    }
+    
+    private static void inserirNaTabela(Produto produto, Pedido pedido) {
+        
+    	Lista<Pedido> pedidosDoProduto;
+    	
+    	try {
+    		pedidosDoProduto = pedidosPorProduto.pesquisar(produto);
+    	} catch (NoSuchElementException excecao) {
+    		pedidosDoProduto = new Lista<>();
+    		pedidosPorProduto.inserir(produto, pedidosDoProduto);
+    	}
+    	pedidosDoProduto.inserir(pedido);
+    }
+    
+    private static void pedidosDoProduto() {
+    	
+    	Lista<Pedido> pedidosDoProduto;
+    	Produto produto = localizarProdutoID(produtosCadastradosPorId);
+    	String nomeArquivo = "RelatorioProduto" + produto.hashCode() + ".txt";  
+    	
+        try {
+        	FileWriter arquivoRelatorio = new FileWriter(nomeArquivo, Charset.forName("UTF-8"));
+    		
+        	pedidosDoProduto = pedidosPorProduto.pesquisar(produto);
+        	arquivoRelatorio.append(pedidosDoProduto.toString() + "\n");
+            arquivoRelatorio.close();
+            System.out.println("Dados salvos em " + nomeArquivo);
+        } catch(IOException excecao) {
+            System.out.println("Problemas para criar o arquivo " + nomeArquivo + ". Tente novamente");        	
+        }
+    }
+    
+    /**
+     * Lê o documento de um cliente informado pelo usuário, localiza o cliente correspondente
+     * e exibe seu histórico completo de pedidos.
+     */
+    public static void pedidosDoCliente() {
+
+    	// TODO: implementar.
+    	// 1) Leia do teclado o documento do cliente desejado.
+    	// 2) Localize o cliente correspondente na árvore clientesPorId.
+    	// 3) Pesquise o histórico de pedidos do cliente na tabela pedidosPorCliente.
+    	// 4) Exiba o cliente e seu histórico de pedidos.
+    	//
+    	// Além de exibir o histórico completo, apresente um resumo ao final: número total de
+    	// pedidos do cliente, valor total gasto e valor médio por pedido.
+    	//
+    	// Implemente ainda a opção de filtrar os pedidos por valor mínimo, informado pelo usuário:
+    	// ao selecionar essa opção no menu, o sistema deve solicitar um valor e exibir apenas os
+    	// pedidos do cliente que o superem. Dica: você pode usar o método filtrar da classe Lista,
+    	// ou adaptar a assinatura deste método para receber esse comportamento como parâmetro.
+
+    }
+
+    /**
+     * TODO: implementar.
+     * Produz um relatório listando todos os clientes que possuem ao menos dois pedidos, exibindo,
+     * para cada um: nome, documento, quantidade de pedidos e valor total acumulado dos pedidos.
+     * O relatório deve ser apresentado em ordem decrescente de valor total.
+     *
+     * Dica: você não precisa (nem deve) acessar a estrutura interna da tabela hash. Para obter
+     * todos os clientes cadastrados, use clientesPorId.recortar(chaveDeOnde, chaveAteOnde) — como
+     * os documentos são sequenciais a partir de 10_000, o recorte de 10_000 até
+     * 10_000 + quantosClientes - 1 devolve uma Lista<Cliente> com todos os clientes cadastrados,
+     * em ordem crescente de documento.
+     * Em seguida, para cada cliente dessa lista (use o método paraCada da classe Lista), pesquise
+     * seu histórico em pedidosPorCliente. Se o cliente não tiver pedidos, pesquisar lança
+     * NoSuchElementException — trate essa exceção para simplesmente ignorar esse cliente no
+     * relatório. Se o histórico tiver tamanho() >= 2, calcule o valor total (veja
+     * calcularValorTotal, da classe Lista) e guarde esse cliente para exibição posterior.
+     * Ao final, ordene os clientes selecionados por valor total, em ordem decrescente, e imprima
+     * o relatório.
+     */
+    public static void rankingClientes() {
+
     }
     
     public static void main(String[] args) {
 		teclado = new Scanner(System.in, Charset.forName("UTF-8"));
         nomeArquivoDados = "produtos.txt";
         produtosCadastradosPorNome = lerProdutos(nomeArquivoDados, (p -> p.descricao));
-        produtosCadastradosPorId = new ABB<Integer, Produto>(produtosCadastradosPorNome, (p -> p.idProduto));
+        // Veja o README.md (na pasta src) para uma explicação detalhada, com exemplos, do
+        // construtor da AVL usado na linha abaixo.
+        produtosCadastradosPorId = new AVL<Integer, Produto>(produtosCadastradosPorNome, (p -> p.idProduto));
+
+        nomeArquivoDados = "clientes.txt";
+        clientesPorId = lerClientes(nomeArquivoDados);
+        
+        pedidosPorProduto = new TabelaHash<>((int)(quantosProdutos * 1.25));
+        pedidosPorCliente = new TabelaHash<>((int)(quantosClientes * 1.25));
+        
+        gerarPedidos(25_000);
         
         int opcao = -1;
       
@@ -200,6 +414,9 @@ public class App {
         	case 5 -> mostrarProduto(removerProdutoId(produtosCadastradosPorId));
         	case 6 -> recortarProdutosNome(produtosCadastradosPorNome); 
         	case 7 -> recortarProdutosId(produtosCadastradosPorId); 
+        	case 8 -> pedidosDoProduto();
+        	// TODO: adicione aqui os cases correspondentes às novas opções do menu (Tarefas 4 e 5),
+        	// chamando pedidosDoCliente() e rankingClientes()
             case 0 -> System.out.println("FLW VLW OBG VLT SMP.");
             }
             pausa();
